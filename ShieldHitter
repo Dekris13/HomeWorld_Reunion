@@ -1,0 +1,122 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+public class ShieldHitter : MonoBehaviour
+{
+	private static int[] hitInfoId = new[] { Shader.PropertyToID("_WorldHitPoint0"), Shader.PropertyToID("_WorldHitPoint1"), Shader.PropertyToID("_WorldHitPoint2") };
+	private static int[] hitTimeId = new[] { Shader.PropertyToID("_HitTime0"), Shader.PropertyToID("_HitTime1"), Shader.PropertyToID("_HitTime2") };
+	private Material material;
+    public int MaxShildHealth;
+    public int ShildHealth;
+    public int ShildRegenerationInSecond;
+    public int LevelOfShild;
+    public List<int> HealthOfShildLevel;
+    public List<int> ShildRegenerationInSecondLevel;
+    private bool shildIsActive = true;
+    public float SBar;
+    public Image ShieldBar;
+
+    public void Start()
+	{
+		if (material == null)
+		{
+			material = this.gameObject.GetComponent<MeshRenderer>().material;
+		}
+        ShildRegeneration();
+        LevelOfShildDetection();
+    }
+
+    public void ShieldBarActivation()
+    {
+        float _ShildHealth = (float)ShildHealth;
+        float _MaxShildHealth = (float)MaxShildHealth;
+        SBar = _ShildHealth / _MaxShildHealth;
+        ShieldBar.fillAmount = SBar;
+    }
+
+    void LevelOfShildDetection()
+    {
+        MaxShildHealth = HealthOfShildLevel[LevelOfShild];
+        ShildHealth = HealthOfShildLevel[LevelOfShild];
+        ShildRegenerationInSecond = ShildRegenerationInSecondLevel[LevelOfShild];
+    }
+
+	int lastHit = 0;
+	public void OnHit(Vector3 point, Vector3 direction)
+	{
+		material.SetVector(hitInfoId[lastHit], point);
+		material.SetFloat(hitTimeId[lastHit], Time.timeSinceLevelLoad);
+		lastHit++;
+		if (lastHit >= hitInfoId.Length)
+			lastHit = 0;
+	}
+
+    void OnCollisionEnter(Collision coll)
+    {
+        GameObject collidedWith = coll.gameObject;
+        if (collidedWith.tag == "Shoot")
+        {
+            Vector3 posCont = coll.contacts[0].point;
+            Vector3 dir = coll.contacts[0].point;
+            OnHit(posCont, dir);
+
+            string _TypeOfDamage = collidedWith.GetComponent<DamageInfo>().TypeOfDamage;
+            int _damage = collidedWith.GetComponent<DamageInfo>().damage;
+
+            if (collidedWith.GetComponent<HealthOfMiniShip>())
+            {
+                collidedWith.GetComponent<HealthOfMiniShip>().DestroyThisShip();
+            }
+            else
+            {
+                Destroy(collidedWith);
+            }
+            TakeDamage(_damage);
+        }
+    }
+
+    public void TakeDamage(int damage)
+    {
+        ShildHealth -= damage;
+        float _ShildHealth = (float)ShildHealth;
+        float _MaxShildHealth = (float)MaxShildHealth;
+        SBar = _ShildHealth / _MaxShildHealth;
+        ShieldBar.fillAmount = SBar;
+
+        if (ShildHealth <= 0)
+        {
+            ShildHealth = 0;
+            ShildDeactivation();
+        }
+    }
+    void ShildDeactivation()
+    {
+        shildIsActive = false;
+        Invoke("ShildActivation", 15);
+        gameObject.SetActive(false);
+    }
+    void ShildActivation()
+    {
+        gameObject.SetActive(true);
+        shildIsActive = true;
+        ShildHealth = 15 * ShildRegenerationInSecond;
+        ShildRegeneration();
+    }
+    void ShildRegeneration()
+    {
+        if (shildIsActive)
+        {
+            Invoke("ShildRegeneration", 1);
+            if (ShildHealth < MaxShildHealth)
+            {
+                ShildHealth += ShildRegenerationInSecond;
+                if (ShildHealth > MaxShildHealth)
+                {
+                    ShildHealth = MaxShildHealth;
+                }
+            }
+        }
+    }
+}
