@@ -1,0 +1,195 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+
+public class Canvas_Dyplomacy : MonoBehaviour
+{
+    public DiplomacyManager _DiplomacyManager;
+    public GalaxyManager _GalaxyManager;
+
+    public List<GameObject> CivButtons;
+    public List<Text> CivButtonsText;
+    public List<GameObject> AgreementsAbailable;
+    public List<Text> AgreementsAbailableButtonsText;
+    public List<GameObject> AgreementsConcluded;
+    public List<Text> AgreementsConcludedButtonsText;
+
+    public GameObject ToConclud;
+    public GameObject Terminate;
+
+    public Text _CivNameText;
+    public Text LevelOfRelationship;
+
+    public Text AgreemantInfo;
+
+    public DiplomacyButtonInfo _DiplomacyButtonInfo;
+
+    public int Player;
+    public int AgreemantInd;
+    public bool CivButton;
+    public bool AgreemantConcludedButton;
+    public bool AgreemantAvailableButton;
+
+    public GameObject Camvas_Answer;
+    public Text AnswerForAgreemant;
+
+
+    void Start()
+    {
+        _DiplomacyManager = GameObject.Find("DiplomacyManager").gameObject.GetComponent<DiplomacyManager>();
+        _GalaxyManager = GameObject.Find("GalaxyManager").gameObject.GetComponent<GalaxyManager>();
+
+        for (int i = 1; i < _GalaxyManager.numOfPlayers; i++)
+        {
+            CivButtons[i].SetActive(true);
+            Text text = AgreementsConcluded[i].GetComponentInChildren<Text>();
+            text.text = _GalaxyManager.OwnersVar[i];
+        }
+    }
+
+
+    public void PressCivButton()
+    {
+        Player = _DiplomacyButtonInfo.Player;
+        ShowCivInfo(Player);
+        CheckAgreements(Player);
+    }
+
+    void ShowCivInfo(int player)
+    {
+        _CivNameText.text = _GalaxyManager.OwnersVar[player];
+        int level = _DiplomacyManager.Relationship[0][player];
+        string name = _DiplomacyManager.CheckNameOfTheRelationship(player);
+        string nameText = name+"("+level+")";
+        LevelOfRelationship.text = nameText;
+    }
+
+    void CheckAgreements(int player)
+    {
+        for (int i = 0; i < AgreementsAbailable.Count; i++)
+        {
+            AgreementsAbailable[i].SetActive(false);
+        }
+        for (int i = 0; i < AgreementsConcluded.Count; i++)
+        {
+            AgreementsConcluded[i].SetActive(false);
+        }
+        AgreementsConcludedDetection(player);
+        AgreementsAbailableDetection(player);
+    }
+
+    void AgreementsConcludedDetection(int player)
+    {
+        List<int> IndOfAgreementsConcluded = new List<int>();
+        List<string> AgreemantsNames = new List<string>();
+        for (int i = 0; i < _DiplomacyManager.AgreemantIsUsed[0][player].Count; i++)
+        {
+            if (_DiplomacyManager.AgreemantIsUsed[0][player][i])
+            {
+                IndOfAgreementsConcluded.Add(i);
+                AgreemantsNames.Add(_DiplomacyManager.NameOfTheAgreemant[i]);
+            }
+        }
+        for (int i = 0; i < AgreemantsNames.Count; i++)
+        {
+            AgreementsConcluded[i].SetActive(true);
+            AgreementsConcluded[i].GetComponent<DiplomacyButtonInfo>().AgreemantInd = IndOfAgreementsConcluded[i];
+            AgreementsConcludedButtonsText[i].text = AgreemantsNames[i];
+        }
+    }
+
+    void AgreementsAbailableDetection(int player)
+    {
+        List<int> IndOfAgreementsAvailable = new List<int>();
+        List<string> names = _DiplomacyManager.NameOfTheAgreemant;
+        List<bool> _AgreemantIsOpend = new List<bool>();
+        for (int i = 0; i < _DiplomacyManager.AgreemantIsOpend[0].Count; i++)
+        {
+            _AgreemantIsOpend.Add(_DiplomacyManager.AgreemantIsOpend[0][i]);
+        }
+        List<string> AgreemantsNames = new List<string>();
+        for (int i = 0; i < _AgreemantIsOpend.Count; i++)
+        {
+            if (_AgreemantIsOpend[i])
+            {
+                if (!_DiplomacyManager.AgreemantIsUsed[0][player][i])
+                {
+                    AgreemantsNames.Add(names[i]);
+                    IndOfAgreementsAvailable.Add(i);
+                }
+            }
+        }
+        for (int i = 0; i < AgreemantsNames.Count; i++)
+        {
+            AgreementsAbailable[i].SetActive(true);
+            AgreementsAbailable[i].GetComponent<DiplomacyButtonInfo>().AgreemantInd = IndOfAgreementsAvailable[i];
+            AgreementsAbailableButtonsText[i].text = AgreemantsNames[i];
+        }
+    }
+
+    public void ConcludAgreement()
+    {
+        Camvas_Answer.SetActive(true);
+        if (AgreementRequiredRelationship(Player, AgreemantInd))
+        {
+            AnswerForAgreemant.text = "The agreement is concluded";
+
+            _DiplomacyManager.AgreemantIsUsed[0][Player][AgreemantInd] = true;
+            CheckAgreements(Player);
+        }
+        else
+        {
+            AnswerForAgreemant.text = "At the moment, we are not interested in concluding this agreement.";
+        }
+    }
+    bool AgreementRequiredRelationship(int player, int agreemant)
+    {
+        if (_DiplomacyManager.Relationship[0][player] > _DiplomacyManager.RequiredLevelOfAgreemant[agreemant])
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    public void TerminateTheAgreement()
+    {
+        Camvas_Answer.SetActive(true);
+        AnswerForAgreemant.text = "We regret that we have decided to terminate this agreement. We hope that this will not affect our relationship.";
+        _DiplomacyManager.AgreemantIsUsed[0][Player][AgreemantInd] = false;
+        CheckAgreements(Player);
+    }
+
+    public void PressAgreemantInfo()
+    {
+        AgreemantInd = _DiplomacyButtonInfo.AgreemantInd;
+        AgreemantConcludedButton = _DiplomacyButtonInfo.AgreemantConcludedButton;
+        AgreemantAvailableButton = _DiplomacyButtonInfo.AgreemantAvailableButton;
+        AgreemantInfo.text = _DiplomacyManager.DescriptionOfAgreemant[AgreemantInd];
+        if (AgreemantConcludedButton)
+        {
+            ToConclud.SetActive(false);
+            Terminate.SetActive(true);
+        }
+        if (AgreemantAvailableButton)
+        {
+            ToConclud.SetActive(true);
+            Terminate.SetActive(false);
+        }
+    }
+
+    public void PressAnswerOK()
+    {
+        Camvas_Answer.SetActive(false);
+    }
+
+    public void Exit()
+    {
+        Effects.FadeScreen(Color.black, 0, 1, 0.3f, () => SceneManager.LoadScene("GalaxyMap"));
+    }
+
+}
