@@ -1,0 +1,147 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.UI;
+
+
+public class ResearchManager : MonoBehaviour
+{
+    public FleetManager _FleetManager;
+    public GalaxyManager _GalaxyManager;
+
+    public List<List<int>> indOfFifishedResearchs;
+    public List<ResearchInfo> allResearchInfoList;
+    public List<List<ResearchInfo>> curResearchInfoList;
+    public List <ResearchInfo> CurResearchInfo;
+    public List <int> ResearchPointsList;
+
+    public int lastResearchPointsIncomePerDay;
+
+    public bool StartGame =true;
+
+    void Awake()
+    {
+        DontDestroyOnLoad(this.gameObject);
+    }
+
+    void Start()
+    {
+        if (startGame)
+        {
+            indOfFifishedResearchs = new List<List<int>>();
+            curResearchInfoList = new List<List<ResearchInfo>>();
+
+            for (int i = 0; i < _GalaxyManager.numOfPlayers; i++)
+            {
+                List<int> _indOfFifishedResearchs = new List<int>();
+                indOfFifishedResearchs.Add(_indOfFifishedResearchs);
+                List<ResearchInfo> _curResearchInfoList = new List<ResearchInfo>();
+                curResearchInfoList.Add(_curResearchInfoList);
+            }
+        }
+        else
+        {
+            // LoadGame();
+        }
+
+    }
+
+    public  void DistributionOfResearchPoints(int player, int researchPoints)
+    {
+        if (researchPoints > 0)
+        {
+            if (player == 0)
+            {
+                lastResearchPointsIncomePerDay = researchPoints;
+            }
+            ResearchPointsList[player] += researchPoints;
+            CheckResearches(player);
+        }
+
+    }
+
+    public void CheckResearches(int player)
+    {
+        if (CurResearchInfo[player] != null)
+        {
+            if (CurResearchInfo[player].costOfResearch <= ResearchPointsList[player]) // проверка, хватает ли очков исследования для завершения исслеования
+            {
+                indOfFifishedResearchs[player].Add(CurResearchInfo[player].indInResearchList);
+                ResearchResults(player, CurResearchInfo[player].indInResearchList); // добавление эффектов исследований в игру
+                ResearchPointsList[player] -= CurResearchInfo[player].costOfResearch;
+
+                for (int i = 0; i < CurResearchInfo[player].indOfNextResearch.Count; i++)
+                {
+                    int ind = CurResearchInfo[player].indOfNextResearch[i];
+                    allResearchInfoList[ind].CheckNeededResearch(CurResearchInfo[player].indInResearchList);
+
+                    if (allResearchInfoList[ind].CheckNeededResearchIsFinished())
+                    {
+                        curResearchInfoList[player].Add(allResearchInfoList[ind]);
+                    }
+                }
+
+                curResearchInfoList[player].Remove(CurResearchInfo[player]);
+
+                if (player == 0)
+                {
+                    Button_Canvas_StarSystemStart _Button_Canvas_StarSystemStart = GameObject.Find("Canvas StarSystem").gameObject.GetComponent<Button_Canvas_StarSystemStart>();
+                    _Button_Canvas_StarSystemStart.PauseGame();
+                    _Button_Canvas_StarSystemStart.ShowMassage(2, 0, 0);
+                    CurResearchInfo[player] = null;
+                }
+                else
+                {
+                    AI_NewReaearchDetection(player);
+                }
+            }
+        } 
+    }
+
+    void AI_NewReaearchDetection(int player)
+    {
+        CurResearchInfo[player] = curResearchInfoList[player][Random.Range(0, curResearchInfoList.Count)]; // сделать приоритет исслеований в зависимост от рассы
+    }
+
+    void ResearchResults(int player, int ind)
+    {
+        switch(ind)
+        {
+            case 0: // добавление пушки
+                _FleetManager.ItemsIsOpened[player][5] = true;
+                _FleetManager.OpenItemDetection(player);
+                break;
+            case 1: // добавление лазера в игру
+                _FleetManager.ShipBodysIsOpend[player][1] = true;
+                _FleetManager.levelOfShipBodys[player][1] = 0;
+                _FleetManager.OpenShipBodysDetection(player);
+                break;
+            case 2: // добавление ракет
+                _FleetManager.ItemsIsOpened[player][2] = true;
+                _FleetManager.OpenItemDetection(player);
+                break;
+            case 3: // добавление лазера в игру
+                _FleetManager.ItemsIsOpened[player][3] = true;
+                _FleetManager.OpenItemDetection(player);
+                break;
+            case 4: // добавление уровня копуса в игру
+                _FleetManager.levelOfShipBodys[player][0] = 3;
+                _FleetManager.OpenShipBodysDetection(player);
+                break;
+            case 5: // добавление торпеды в игру
+                _FleetManager.ItemsIsOpened[player][6] = true;
+                _FleetManager.OpenItemDetection(player);
+                break;
+            case 6: // добавление ионной пушки в игру
+                _FleetManager.ItemsIsOpened[player][4] = true;
+                _FleetManager.OpenItemDetection(player);
+                break;
+            case 7: // добавление уровня копуса в игру
+                _FleetManager.levelOfShipBodys[player][0] = 5;
+                _FleetManager.OpenShipBodysDetection(player);
+                break;
+            default:
+                break;            
+        }
+    }
+}
